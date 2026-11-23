@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0d0e10"/>
+  <rect x="24" y="24" width="464" height="464" rx="80" fill="none" stroke="#3b82f6" stroke-width="16"/>
+  <text x="256" y="268" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="150" font-weight="900" fill="#ffffff" letter-spacing="6">BTE</text>
+  <text x="256" y="340" text-anchor="middle" font-family="Arial, Helvetica, sans-serif" font-size="34" font-weight="700" fill="#3b82f6" letter-spacing="4">BUILT TO ENDURE</text>
+  <rect x="196" y="372" width="120" height="10" rx="5" fill="#3b82f6"/>
+</svg>
