@@ -41,6 +41,31 @@
 .back-to-week{display:inline-block;margin-bottom:12px;}
 .day-page-note{font-family:var(--font-mono);font-size:11px;color:var(--ink-soft);margin:0 0 10px;}.edit-client-btn{background:none;border:none;cursor:pointer;opacity:0.6;font-size:12px;}
 
+.ready-row{display:flex;gap:14px;align-items:center;margin:0 0 10px;flex-wrap:wrap;}
+.ready-row .ready-label{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;color:var(--ink-soft);}
+.ready-scale{display:flex;gap:6px;}
+.ready-btn{width:32px;height:32px;border-radius:50%;border:1.5px solid var(--ink-soft);background:var(--white);font-family:var(--font-mono);font-size:13px;cursor:pointer;color:var(--ink-soft);}
+.ready-btn.sel{background:var(--blue);border-color:var(--blue);color:#fff;font-weight:700;}
+.pain-btn{border:1.5px solid var(--ink-soft);background:var(--white);color:var(--ink-soft);font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:7px 10px;border-radius:20px;cursor:pointer;}
+.pain-btn.sel{background:var(--clay);border-color:var(--clay);color:#fff;font-weight:700;}
+.note-box{width:100%;border:1px solid var(--line);border-radius:var(--radius);padding:8px;font-family:var(--font-body);font-size:13px;min-height:44px;resize:vertical;background:#0d0e10;color:var(--ink);margin-top:8px;}
+.urgency-toggle{display:flex;gap:6px;margin-top:6px;}
+.urgency-btn{border:1.5px solid var(--ink-soft);background:var(--white);color:var(--ink-soft);font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;padding:6px 10px;border-radius:20px;cursor:pointer;}
+.urgency-btn.sel-routine{background:var(--amber);border-color:var(--amber);color:#111;font-weight:700;}
+.urgency-btn.sel-urgent{background:var(--clay);border-color:var(--clay);color:#fff;font-weight:700;}
+.note-card{border:1.5px solid var(--amber);border-left-width:4px;background:#241d0d;border-radius:var(--radius);padding:10px 12px;margin-top:8px;}
+.note-card.urgent{border-color:var(--clay);background:#2a1414;}
+.note-card .note-head{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--amber);font-weight:700;margin-bottom:4px;}
+.note-card.urgent .note-head{color:var(--clay);}
+.note-card .note-text{font-size:14px;}
+.note-card .note-meta{font-family:var(--font-mono);font-size:11px;color:var(--ink-soft);margin-top:4px;}
+.note-actions{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;align-items:center;}
+.note-reply-input{flex:1;min-width:180px;border:1px solid var(--line);border-radius:var(--radius);padding:7px 10px;font-family:var(--font-body);font-size:13px;background:#0d0e10;color:var(--ink);}
+.coach-reply-box{border:1.5px solid var(--blue);border-left-width:4px;background:#12203a;border-radius:var(--radius);padding:10px 12px;margin:0 0 10px;font-size:14px;}
+.coach-reply-box .reply-head{font-family:var(--font-mono);font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--blue);font-weight:700;margin-bottom:4px;}
+.flag-urgent{display:inline-block;min-width:16px;height:16px;line-height:16px;text-align:center;border-radius:50%;background:var(--clay);color:#fff;font-family:var(--font-mono);font-size:11px;font-weight:700;margin-right:5px;vertical-align:middle;padding:0 3px;}
+.flag-routine{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--amber);margin-right:5px;vertical-align:middle;}
+
 /* --- BTE dark athletic theme (Nov 22, 2026) --- */
 body{background:var(--bg);color-scheme:dark;}
 header.top{background:#111318;border-bottom:3px solid var(--blue);padding:16px 24px 14px;}
@@ -672,17 +697,28 @@ async function render(){
   wireEvents(client, program, weekKey, log);
 }
 
+function noteFlagFor(clientId){
+  const sessions = (state.logCache[clientId]?.sessions || []);
+  if(sessions.some(s=>s.noteForCoach && s.noteUrgency==='urgent' && !s.noteSeenAt)) return 'urgent';
+  if(sessions.some(s=>s.noteForCoach && !s.noteSeenAt)) return 'routine';
+  return null;
+}
+
 function renderRoster(){
+  const rank = f => f==='urgent' ? 0 : f==='routine' ? 1 : 2;
+  const ordered = state.clients.map((c,i)=>({c,i})).sort((a,b)=> rank(noteFlagFor(a.c.id)) - rank(noteFlagFor(b.c.id)) || a.i - b.i);
   return `
     <aside class="roster">
       <h3>Clients</h3>
-      ${state.clients.map(c=>{
+      ${ordered.map(({c})=>{
         const sessions = (state.logCache[c.id]?.sessions || []);
         const streak = sessions.slice(-5);
         const lastSeenTime = (state.lastSeen && state.lastSeen[c.id]) || '';
         const hasUnread = sessions.some(s=> s.loggedAt && s.loggedAt > lastSeenTime);
+        const flag = noteFlagFor(c.id);
+        const flagHtml = flag==='urgent' ? '<span class="flag-urgent" title="Urgent note for coach">!</span>' : flag==='routine' ? '<span class="flag-routine" title="Note for coach"></span>' : hasUnread ? '<span class="unread-dot" title="New feedback"></span>' : '';
         return `<div class="client-item ${c.id===state.selectedClientId?'active':''}" data-id="${c.id}">
-          <span>${hasUnread ? '<span class="unread-dot" title="New feedback"></span>' : ''}${c.name}</span>
+          <span>${flagHtml}${c.name}</span>
           <span style="display:flex; align-items:center; gap:6px;">
             <span class="streak-dots">${[0,1,2,3,4].map(i=>`<span class="dot ${streak[i]?.completed?'on':''}"></span>`).join('')}</span>
             <button class="edit-client-btn" data-edit-id="${c.id}" title="Edit / view PIN" style="background:none; border:none; cursor:pointer; opacity:0.6; font-size:12px;">✎</button>
@@ -771,9 +807,26 @@ function renderCoachPanel(client, week, weekKey, log){
           </div>
           <div>
             ${s.effort ? `<span class="fb-effort">RPE ${s.effort}</span>` : ''}
+            ${s.feel ? `<span class="fb-effort" style="background:var(--pine);">Feel ${s.feel}/5</span>` : ''}
+            ${s.sleep ? `<span class="fb-effort" style="background:#334155;">Sleep ${s.sleep}/5</span>` : ''}
+            ${s.readiness ? `<span class="fb-effort" style="background:#334155;">Body ${s.readiness}/5</span>` : ''}
+            ${s.painFlag ? `<span class="fb-incomplete">Pain / can't do this</span>` : ''}
             ${!s.completed ? `<span class="fb-incomplete">Not completed</span>` : ''}
           </div>
           ${s.comment ? `<div class="fb-comment">${escapeHtml(s.comment)}</div>` : ''}
+          ${s.noteForCoach ? `
+          <div class="note-card ${s.noteUrgency==='urgent'?'urgent':''}">
+            <div class="note-head">${s.noteUrgency==='urgent' ? '⚠ Urgent note for coach — needs a reply today' : '✉ Note for coach'}${s.noteSeenAt ? ' · addressed ✓' : ''}</div>
+            <div class="note-text">${escapeHtml(s.noteForCoach)}</div>
+            <div class="note-meta">Sleep ${s.sleep ?? '—'}/5 · Body ${s.readiness ?? '—'}/5 · Feel ${s.feel ?? '—'}/5 · RPE ${s.effort ?? '—'}${s.painFlag ? ' · Pain flag' : ''}</div>
+            ${s.coachReply ? `<div class="fb-comment" style="margin-top:6px;"><strong>Your reply:</strong> ${escapeHtml(s.coachReply)}</div>` : ''}
+            <div class="note-actions">
+              ${s.noteSeenAt ? '' : `<button class="btn small" data-mark-note="${s.date}">Mark addressed</button>`}
+              <input class="note-reply-input" data-reply-input="${s.date}" placeholder="Reply to ${escapeAttr(client.name)}…" value="">
+              <button class="btn primary small" data-send-reply="${s.date}">Send reply</button>
+            </div>
+          </div>` : ''}
+          ${!s.noteForCoach && s.coachReply ? `<div class="fb-comment"><strong>Your reply:</strong> ${escapeHtml(s.coachReply)}</div>` : ''}
         </div>
       `).join('') : '<div class="empty">No feedback logged yet.</div>'}
     ` : state.activeTab==='import' ? renderImportPanel(client) : renderSettingsPanel()}
@@ -874,6 +927,8 @@ function renderClientPanel(client, week, weekKey, log, program){
           </div>
           ${s.actuals && Object.keys(s.actuals).length ? `<div class="fb-comment">Logged: ${escapeHtml(Object.values(s.actuals).join(' · '))}</div>` : ''}
           ${s.comment ? `<div class="fb-comment">${escapeHtml(s.comment)}</div>` : ''}
+          ${s.noteForCoach ? `<div class="fb-comment"><strong>Note for coach${s.noteUrgency==='urgent' ? ' (urgent)' : ''}:</strong> ${escapeHtml(s.noteForCoach)}</div>` : ''}
+          ${s.coachReply ? `<div class="coach-reply-box" style="margin-top:8px;"><div class="reply-head">Coach Niki replied</div>${escapeHtml(s.coachReply)}</div>` : ''}
         </div>
       `).join('') || '<div class="empty">No sessions logged yet.</div>'}
     `}
@@ -1012,6 +1067,12 @@ function renderClientDayBlockForDate(dayAbbr, day, dateStr, log){
   const existing = (log.sessions||[]).find(s=>s.date===dateStr);
   const effort = existing?.effort || null;
   const feel = existing?.feel || null;
+  const sleep = existing?.sleep || null;
+  const readiness = existing?.readiness || null;
+  const painFlag = existing?.painFlag || false;
+  const noteForCoach = existing?.noteForCoach || '';
+  const noteUrgency = existing?.noteUrgency || 'routine';
+  const coachReply = existing?.coachReply || '';
   const comment = existing?.comment || '';
   const completed = existing?.completed || false;
   const actuals = existing?.actuals || {};
@@ -1020,7 +1081,19 @@ function renderClientDayBlockForDate(dayAbbr, day, dateStr, log){
       <div class="db-head">
         <div><div class="db-day">${DAY_NAMES[dayAbbr]} · ${dateStr}</div><h4>${escapeHtml(day.title || 'Untitled')}</h4></div>
       </div>
+      ${coachReply ? `<div style="padding:12px 12px 0;"><div class="coach-reply-box"><div class="reply-head">Coach Niki replied</div>${escapeHtml(coachReply)}</div></div>` : ''}
       <div class="db-body">
+        <div class="ready-row">
+          <span class="ready-label">Sleep</span>
+          <div class="ready-scale">
+            ${[1,2,3,4,5].map(n=>`<button class="ready-btn ${sleep==n?'sel':''}" data-sleep="${n}" data-day="${dayAbbr}">${n}</button>`).join('')}
+          </div>
+          <span class="ready-label">Body</span>
+          <div class="ready-scale">
+            ${[1,2,3,4,5].map(n=>`<button class="ready-btn ${readiness==n?'sel':''}" data-readiness="${n}" data-day="${dayAbbr}">${n}</button>`).join('')}
+          </div>
+          <button class="pain-btn ${painFlag?'sel':''}" data-pain="${dayAbbr}">Pain / can't do this</button>
+        </div>
         ${day.exercises.length ? clientExerciseRows(day.exercises, actuals, dayAbbr) : '<div class="empty">Rest day / no exercises listed.</div>'}
       </div>
       <div class="log-panel">
@@ -1040,6 +1113,11 @@ function renderClientDayBlockForDate(dayAbbr, day, dateStr, log){
           <label class="complete-toggle"><input type="checkbox" data-complete="${dayAbbr}" ${completed?'checked':''}> Completed</label>
         </div>
         <textarea class="comment" data-comment="${dayAbbr}" placeholder="How did it feel? Questions for Coach Niki?">${escapeHtml(comment)}</textarea>
+        <textarea class="note-box" data-note="${dayAbbr}" placeholder="Note for Coach Niki — something she should see (pain, can't do a move, need a change)…">${escapeHtml(noteForCoach)}</textarea>
+        <div class="urgency-toggle">
+          <button class="urgency-btn ${noteUrgency==='routine'?'sel-routine':''}" data-urgency="routine" data-day="${dayAbbr}">Routine</button>
+          <button class="urgency-btn ${noteUrgency==='urgent'?'sel-urgent':''}" data-urgency="urgent" data-day="${dayAbbr}">Urgent — need a reply today</button>
+        </div>
         <div style="text-align:right; margin-top:8px;"><button class="btn primary small" data-save-log="${dayAbbr}">Save</button></div>
       </div>
     </div>`;
@@ -1081,6 +1159,8 @@ function renderReadOnlyDayBlock(dayAbbr, day, monday, log){
           <div>${existing.effort ? `<span class="fb-effort">RPE ${existing.effort}</span>` : ''} ${existing.feel ? `<span class="fb-effort" style="background:var(--pine);">Feel ${existing.feel}/5</span>` : ''} ${!existing.completed ? `<span class="fb-incomplete">Not completed</span>` : ''}</div>
           ${existing.actuals && Object.keys(existing.actuals).length ? `<div class="fb-comment">Logged: ${escapeHtml(Object.values(existing.actuals).join(' · '))}</div>` : ''}
           ${existing.comment ? `<div class="fb-comment">${escapeHtml(existing.comment)}</div>` : ''}
+          ${existing.noteForCoach ? `<div class="fb-comment"><strong>Note for coach${existing.noteUrgency==='urgent' ? ' (urgent)' : ''}:</strong> ${escapeHtml(existing.noteForCoach)}</div>` : ''}
+          ${existing.coachReply ? `<div class="coach-reply-box" style="margin-top:8px;"><div class="reply-head">Coach Niki replied</div>${escapeHtml(existing.coachReply)}</div>` : ''}
         </div>
       ` : ''}
     </div>`;
@@ -1099,6 +1179,12 @@ function wireEvents(client, program, weekKey, log){
     state.coachAuthed = false;
     state.activeTab = 'week';
     state.openDay = null;
+    // Clear caches so the next login re-reads the backend — otherwise a
+    // coach switching from client view in the same tab would see stale
+    // logs and miss a new note flag.
+    state.logCache = {};
+    state.programCache = {};
+    state.lastSeenLoaded = false;
     render();
   };
   const back = root.querySelector('#backBtn');
@@ -1291,6 +1377,33 @@ function wireEvents(client, program, weekKey, log){
 
     const exportDataBtn = root.querySelector('#exportDataBtn');
     if(exportDataBtn) exportDataBtn.onclick = ()=>{ exportAllData(); };
+
+    root.querySelectorAll('[data-mark-note]').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const sess = (log.sessions||[]).find(s=>s.date===btn.dataset.markNote);
+        if(!sess) return;
+        sess.noteSeenAt = new Date().toISOString();
+        await saveLog(client.id);
+        flashStatus('Note marked addressed ✓');
+        render();
+      };
+    });
+
+    root.querySelectorAll('[data-send-reply]').forEach(btn=>{
+      btn.onclick = async ()=>{
+        const dateStr = btn.dataset.sendReply;
+        const input = root.querySelector(`[data-reply-input="${dateStr}"]`);
+        const text = input ? input.value.trim() : '';
+        if(!text){ flashStatus('Write a reply first'); return; }
+        const sess = (log.sessions||[]).find(s=>s.date===dateStr);
+        if(!sess) return;
+        sess.coachReply = text;
+        sess.noteSeenAt = new Date().toISOString();
+        await saveLog(client.id);
+        flashStatus('Reply sent ✓');
+        render();
+      };
+    });
   }
 
   if(state.role === 'client'){
@@ -1313,6 +1426,34 @@ function wireEvents(client, program, weekKey, log){
         const dayAbbr = btn.dataset.day;
         root.querySelectorAll(`[data-feel][data-day="${dayAbbr}"]`).forEach(b=>b.classList.remove('sel'));
         btn.classList.add('sel');
+      };
+    });
+
+    root.querySelectorAll('[data-sleep]').forEach(btn=>{
+      btn.onclick = ()=>{
+        const dayAbbr = btn.dataset.day;
+        root.querySelectorAll(`[data-sleep][data-day="${dayAbbr}"]`).forEach(b=>b.classList.remove('sel'));
+        btn.classList.add('sel');
+      };
+    });
+
+    root.querySelectorAll('[data-readiness]').forEach(btn=>{
+      btn.onclick = ()=>{
+        const dayAbbr = btn.dataset.day;
+        root.querySelectorAll(`[data-readiness][data-day="${dayAbbr}"]`).forEach(b=>b.classList.remove('sel'));
+        btn.classList.add('sel');
+      };
+    });
+
+    root.querySelectorAll('[data-pain]').forEach(btn=>{
+      btn.onclick = ()=>{ btn.classList.toggle('sel'); };
+    });
+
+    root.querySelectorAll('[data-urgency]').forEach(btn=>{
+      btn.onclick = ()=>{
+        const dayAbbr = btn.dataset.day;
+        root.querySelectorAll(`[data-urgency][data-day="${dayAbbr}"]`).forEach(b=>b.classList.remove('sel-routine','sel-urgent'));
+        btn.classList.add(btn.dataset.urgency==='urgent' ? 'sel-urgent' : 'sel-routine');
       };
     });
 
@@ -1341,10 +1482,20 @@ function wireEvents(client, program, weekKey, log){
         block.querySelectorAll('[data-actual]').forEach(inp=>{ if(inp.value.trim()) actuals[inp.dataset.actual] = inp.value.trim(); });
         const dayTitleEl = block.querySelector('.db-head h4');
         const dayTitle = dayTitleEl ? dayTitleEl.textContent : '';
+        const sleepBtn = block.querySelector(`[data-sleep].sel`);
+        const sleep = sleepBtn ? parseInt(sleepBtn.dataset.sleep) : null;
+        const readinessBtn = block.querySelector(`[data-readiness].sel`);
+        const readiness = readinessBtn ? parseInt(readinessBtn.dataset.readiness) : null;
+        const painBtn = block.querySelector(`[data-pain]`);
+        const painFlag = painBtn ? painBtn.classList.contains('sel') : false;
+        const noteForCoach = block.querySelector(`[data-note]`).value.trim();
+        const urgencyBtn = block.querySelector(`[data-urgency].sel-routine, [data-urgency].sel-urgent`);
+        const noteUrgency = urgencyBtn ? urgencyBtn.dataset.urgency : 'routine';
 
         let sessions = log.sessions || [];
+        const prior = sessions.find(s=>s.date===dateStr);
         sessions = sessions.filter(s=>s.date!==dateStr);
-        sessions.push({date: dateStr, day: dayAbbr, dayTitle, effort, feel, completed, comment, actuals, loggedAt: new Date().toISOString()});
+        sessions.push({date: dateStr, day: dayAbbr, dayTitle, effort, feel, completed, comment, actuals, sleep, readiness, painFlag, noteForCoach, noteUrgency, noteSeenAt: (prior && prior.noteForCoach === noteForCoach) ? (prior.noteSeenAt || null) : null, coachReply: prior?.coachReply || '', loggedAt: new Date().toISOString()});
         log.sessions = sessions;
         await saveLog(client.id);
         flashStatus('Logged ✓');
