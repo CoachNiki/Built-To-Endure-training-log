@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Built to Endure — Training Log</title>
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="description" content="Built to Endure training log — your week, one day at a time. Log it in the moment.">
 <meta name="theme-color" content="#0d0e10">
 <meta name="mobile-web-app-capable" content="yes">
@@ -108,6 +108,50 @@ header.top{background:#111318;border-bottom:3px solid var(--blue);padding:16px 2
 .add-ex-btn{color:var(--blue);}
 .add-ex-btn:hover{background:#262b33;}
 .client-item.active{background:var(--blue);}
+
+/* --- iOS sizing fix 2 (Nov 23, 2026) ---
+   Root cause of the pinch-to-zoom-out: iOS Safari zooms in whenever a text
+   field under 16px is tapped, and the zoom STAYS when switching tabs in the
+   same document — so after tapping Note/Comment on Today, the Week view
+   rendered zoomed-in, clipped left AND right. Chromium cannot reproduce
+   this (its visualViewport scale stays 1 on focus), which is why two
+   Playwright audits passed while her phone still pinched. Fix: every
+   editable text field is 16px. (Do NOT disable zoom via maximum-scale —
+   iOS ignores it and it hurts accessibility; 16px is the real fix.)
+   Note: two earlier mobile rules were silently defeated by later rules of
+   higher/equal specificity (.comment 16px lost to textarea.comment 13px;
+   brand mark 22px lost to the 26px BTE-theme rule). This block is last in
+   the stylesheet so it wins. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;}
+input[type="text"],input[type="number"],input:not([type]),textarea,select{font-size:16px;}
+textarea.comment{font-size:16px;}
+.note-box{font-size:16px;}
+.note-reply-input{font-size:16px;}
+.modline textarea{font-size:16px;}
+.modal input,.modal textarea{font-size:16px;}
+.ex-table input,.ex-table textarea{font-size:16px;}
+#importText{font-size:16px;}
+#jumpDate{font-size:13px;}
+/* Standalone (home-screen) header sits under the iOS status bar with
+   black-translucent style — safe-area padding drops it below the clock. */
+header.top{padding-top:calc(16px + env(safe-area-inset-top,0px));}
+@media(max-width:760px){
+  /* RPE 1-10 beside its label squeezed the buttons to 20px-wide ovals
+     (17px at 360px) with "10" crammed edge-to-edge. Scale gets its own
+     full-width line; buttons spread evenly (~30px at 390px). */
+  .rpe-scale,.feel-scale{flex:1 1 100%;max-width:100%;}
+  .rpe-btn{max-width:none;height:32px;}
+  .brand .mark{font-size:22px;}
+  /* The wordmark wrapped mid-phrase when the Oswald webfont didn't load
+     (fallback sans is wider) — keep it on one line; the tag may drop
+     below instead. */
+  .brand{flex-wrap:wrap;}
+  .brand .mark{white-space:nowrap;font-size:20px;}
+  header.top{padding-top:calc(14px + env(safe-area-inset-top,0px));}
+  .week-header>div{min-width:0;}
+  .week-header h2{overflow-wrap:break-word;}
+  .day-summary{min-width:0;}
+}
 .client-item:hover{background:#1d2026;}
 input[type="date"]{color-scheme:dark;}
 ::-webkit-calendar-picker-indicator{filter:invert(1);}
@@ -620,9 +664,9 @@ async function render(){
           <p style="color:var(--ink-soft); font-size:13px; margin-top:-6px;">Enter your name and the PIN Coach Niki gave you.</p>
           <form id="loginForm" style="max-width:280px; margin:20px auto 0; text-align:left;" onsubmit="return false;">
             <label style="font-family:var(--font-mono); font-size:11px; text-transform:uppercase; color:var(--ink-soft); display:block; margin-bottom:4px;">Name</label>
-            <input id="loginName" autocomplete="off" style="width:100%; padding:10px; border:1.5px solid var(--ink); border-radius:var(--radius); font-family:var(--font-body); font-size:14px; margin-bottom:14px;" placeholder="Your first name">
+            <input id="loginName" autocomplete="off" style="width:100%; padding:10px; border:1.5px solid var(--ink); border-radius:var(--radius); font-family:var(--font-body); font-size:16px; margin-bottom:14px;" placeholder="Your first name">
             <label style="font-family:var(--font-mono); font-size:11px; text-transform:uppercase; color:var(--ink-soft); display:block; margin-bottom:4px;">PIN</label>
-            <input id="loginPin" autocomplete="off" inputmode="numeric" style="width:100%; padding:10px; border:1.5px solid var(--ink); border-radius:var(--radius); font-family:var(--font-mono); font-size:14px; margin-bottom:8px;" placeholder="4-digit PIN">
+            <input id="loginPin" autocomplete="off" inputmode="numeric" style="width:100%; padding:10px; border:1.5px solid var(--ink); border-radius:var(--radius); font-family:var(--font-mono); font-size:16px; margin-bottom:8px;" placeholder="4-digit PIN">
             ${state.loginError ? `<div style="color:var(--clay); font-family:var(--font-mono); font-size:12px; margin-bottom:10px;">${state.loginError}</div>` : ''}
             <button type="button" id="loginSubmit" class="btn primary" style="width:100%;">Sign In</button>
           </form>
@@ -851,7 +895,7 @@ Wed: Rest
 
 WEEK 2
 Mon: Easy Run
-- Easy Run | 1 | 5 mi |" style="width:100%; min-height:260px; font-family:var(--font-mono); font-size:12.5px; padding:12px; border:1px solid var(--line); border-radius:var(--radius); resize:vertical;">${escapeHtml(state.importText||'')}</textarea>
+- Easy Run | 1 | 5 mi |" style="width:100%; min-height:260px; font-family:var(--font-mono); font-size:16px; padding:12px; border:1px solid var(--line); border-radius:var(--radius); resize:vertical;">${escapeHtml(state.importText||'')}</textarea>
     <div style="margin-top:10px; display:flex; gap:8px;">
       <button class="btn" id="parsePreviewBtn">Parse &amp; Preview</button>
       ${state.importPreview ? `<button class="btn primary" id="commitImportBtn">Save All ${state.importPreview.weeks.length} Weeks</button>` : ''}
